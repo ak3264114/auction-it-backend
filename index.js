@@ -15,6 +15,18 @@ connectDB();
 app.use("/api/user", require("./server/routes/userRoute"));
 app.use("/api/item", require("./server/routes/itemRoute"));
 app.use("/api/bid", require("./server/routes/biddingRoute"));
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
 	console.log(`listing on port  localhost:${PORT}`);
+});
+const io = require("socket.io")(server, {
+	pingTimeout: 6000,
+	cors: {
+		origin: process.env.FRONTEND_URL,
+	},
+});
+
+io.on("connection", (socket) => {
+	socket.on("bid-added", (newBidReceived) => {
+		io.emit("newBid", newBidReceived);
+	});
 });
