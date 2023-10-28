@@ -77,12 +77,10 @@ const acceptBid = async (req, res) => {
 			return res.status(404).json({ Error: true, Message: "Item not found" });
 		}
 		if (sellerId.toString() !== item.seller.toString()) {
-			return res
-				.status(403)
-				.json({
-					Error: true,
-					Message: "Unauthorized: Only the seller can accept the bid",
-				});
+			return res.status(403).json({
+				Error: true,
+				Message: "Unauthorized: Only the seller can accept the bid",
+			});
 		}
 
 		item.price = bid.bidAmount;
@@ -101,4 +99,25 @@ const acceptBid = async (req, res) => {
 	}
 };
 
-module.exports = { placeBid, acceptBid };
+const getBiddingDataByItemId = async (req, res) => {
+	const { itemId } = req.params;
+
+	try {
+		const biddingData = await Bidding.find({ item: itemId });
+
+		if (!biddingData) {
+			return res
+				.status(404)
+				.json({ Error: true, Message: "Bidding data not found" });
+		}
+
+		return res.status(200).json({ Error: false, BiddingData: biddingData });
+	} catch (error) {
+		console.error("Error in getting bidding data by item ID:", error);
+		return res
+			.status(500)
+			.json({ Error: true, Message: "Internal server error" });
+	}
+};
+
+module.exports = { placeBid, acceptBid, getBiddingDataByItemId };
