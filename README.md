@@ -9,7 +9,7 @@ Note  :  It is recommended to run the app on localhost because backend is host
 
 Postman Collection  : https://api.postman.com/collections/23038556-495a5bad-d45a-41cb-931e-b084f319ce1a?access_key=PMAT-01HDPTMY80KGS7BJFR66NMZFA5
 
-Api EndPoint:
+### Api EndPoint:
 - SignUp : {{local_url}}/api/user/signup
 - Login : {{local_url}}/api/user/login
 - verifyEmail : {{local_url}}/api/user/verify-email?token=ey......
