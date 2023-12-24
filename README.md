@@ -4,8 +4,8 @@
 
 ### Live Links :
 Note  :  It is recommended to run the app on localhost because backend is hosted at onrender and its response time is too late as I am using a free service.
-- frontend : https://auctionit-r45p.onrender.com
-- backend : https://auction-it-liard.vercel.app
+- frontend : https://auction-it-liard.vercel.app
+- backend : https://auctionit-r45p.onrender.com
 
 Postman Collection  : https://api.postman.com/collections/23038556-495a5bad-d45a-41cb-931e-b084f319ce1a?access_key=PMAT-01HDPTMY80KGS7BJFR66NMZFA5
 
