@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const connectDB = require("./server/database/connection");
 const app = express();
 const cors = require("cors");
+const { errorHandler, CustomError } = require("./server/helper/errorHelper");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
@@ -15,6 +16,19 @@ connectDB();
 app.use("/api/user", require("./server/routes/userRoute"));
 app.use("/api/item", require("./server/routes/itemRoute"));
 app.use("/api/bid", require("./server/routes/biddingRoute"));
+
+app.use(function (req, res, next) {
+	return res.status(404).json({
+        error: true,
+        message: "Resource Not Found",
+        errType: "HTTP ERROR",
+        statusCode: 404,
+    });
+  });
+
+app.use(errorHandler);
+
+
 const server = app.listen(PORT, () => {
 	console.log(`listing on port  localhost:${PORT}`);
 });

@@ -1,33 +1,18 @@
-const Joi = require("joi");
+
 var jwt = require("jsonwebtoken");
 const User = require("../model/user");
 const bcrypt = require("bcrypt");
 const sendVerificationMail = require("../helper/sendVerificationMail");
+const { CustomError } = require("../helper/errorHelper");
 
-const userSchema = Joi.object({
-	name: Joi.string().required(),
-	email: Joi.string().email().required(),
-	password: Joi.string().min(6).required(),
-});
 
-const registerUser = async (req, res) => {
-	const { error } = userSchema.validate(req.body);
 
-	if (error) {
-		return res
-			.status(400)
-			.json({ Error: true, Message: error.details[0].message });
-	}
-
+const registerUser = async (req, res, next) => {
 	const { name, email, password } = req.body;
 
 	try {
 		const existUser = await User.findOne({ email });
-		if (existUser) {
-			return res
-				.status(400)
-				.json({ Error: true, Message: "User already exists with this email" });
-		}
+		if (existUser) throw new CustomError("User already exists with this email", 400)
 		const hashedPassword = await bcrypt.hash(password, 10);
 		const newUser = new User({
 			name,
@@ -59,10 +44,7 @@ const registerUser = async (req, res) => {
 			user: newUser,
 		});
 	} catch (error) {
-		console.error("Error in registering user:", error);
-		return res
-			.status(500)
-			.json({ Error: true, Message: "Internal server error" });
+		next(error)
 	}
 };
 
