@@ -51,5 +51,5 @@ exports.errorHandler = (error, req, res, _next) => {
         errType: constants.ERROR_TYPES.UNEXPECTED,
         stack: req.app.get('env') === 'development' ? error.stack : undefined
     });
-    
+
 };

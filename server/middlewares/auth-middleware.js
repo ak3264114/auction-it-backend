@@ -6,28 +6,31 @@ dotenv.config({ path: "config.env" });
 exports.checkUserAuth = async (req, res, next) => {
 	let token;
 	const { authorization } = req.headers;
+
 	if (authorization && authorization.startsWith("token")) {
+		token = authorization.split(" ")[1];
 		try {
-			token = authorization.split(" ")[1];
 			const { id } = jwt.verify(token, process.env.JWT_ACCESS_KEY);
 			req.user = await User.findById(id).select("-password");
+
 			if (req.user) {
-				next();
+				return next();
 			} else {
-				res.status(500).json({
-					Error: "True",
+				return res.status(401).json({
+					error: "true",
 					message: "Unauthorized User",
 				});
 			}
 		} catch (error) {
-			res
-				.status(500)
-				.json({ Error: "True", message: error.message || "Unauthorized User" });
+			return res.status(401).json({
+				error: "true",
+				message: error.message || "Unauthorized User",
+			});
 		}
 	}
-	if (!token) {
-		res
-			.status(401)
-			.json({ Error: "True", message: "Unauthorized User , No token" });
-	}
+
+	return res.status(401).json({
+		error: "true",
+		message: "Unauthorized User, No token",
+	});
 };

@@ -4,15 +4,16 @@ const User = require("../model/user");
 const bcrypt = require("bcrypt");
 const sendVerificationMail = require("../helper/sendVerificationMail");
 const { CustomError } = require("../helper/errorHelper");
+const { generateEmailVerificationToken, generateAuthToken, verifyMailToken } = require("../helper/tokenHelper");
 
 
 
 const registerUser = async (req, res, next) => {
 	const { name, email, password } = req.body;
-
 	try {
 		const existUser = await User.findOne({ email });
 		if (existUser) throw new CustomError("User already exists with this email", 400)
+
 		const hashedPassword = await bcrypt.hash(password, 10);
 		const newUser = new User({
 			name,
@@ -21,26 +22,20 @@ const registerUser = async (req, res, next) => {
 		});
 
 		try {
-			const token = jwt.sign(
-				{ email },
-				process.env.JWT_VERIFY_MAIL_SECRET_KEY,
-				{
-					expiresIn: "15m",
-				},
-			);
+			const token = generateEmailVerificationToken(email)
 			sendVerificationMail(email, token);
 		} catch (emailError) {
-			console.error("Error in sending verification email:", emailError);
-			return res
-				.status(500)
-				.json({ Error: true, Message: "Error in sending verification email" });
+			throw new CustomError("Error in sending verification email", 500)
 		}
 
 		await newUser.save();
 
+		const authToken = generateAuthToken(newUser._id)
+
 		return res.status(201).json({
-			Error: false,
-			Message: "User registered successfully Please Verify Your Email",
+			error: false,
+			message: "User registered successfully Please Verify Your Email",
+			token: authToken,
 			user: newUser,
 		});
 	} catch (error) {
@@ -48,61 +43,64 @@ const registerUser = async (req, res, next) => {
 	}
 };
 
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
 	const { email, password } = req.body;
 	try {
 		const user = await User.findOne({ email, isEmailVerified: true });
-		if (!user) {
-			return res.status(400).json({ Error: true, Message: "User not found" });
-		}
+		if (!user) throw new CustomError("User not found", 400)
 
 		const isPasswordValid = await bcrypt.compare(password, user.password);
-		if (!isPasswordValid) {
-			return res.status(400).json({ Error: true, Message: "Invalid password" });
-		}
+		if (!isPasswordValid) throw new CustomError("Invalid password", 400)
 
-		const token = jwt.sign({ id: user._id }, process.env.JWT_ACCESS_KEY, {
-			expiresIn: "7d",
-		});
+		const token = generateAuthToken(user._id)
 		return res
 			.status(200)
-			.json({ Error: false, Message: "Login successful", token });
+			.json({ error: false, message: "Login successful", token });
 	} catch (error) {
-		console.error("Error in user login:", error);
-		return res
-			.status(500)
-			.json({ Error: true, Message: "Internal server error" });
+		next(error)
 	}
 };
 
-const verifyEmail = async (req, res) => {
+const verifyEmail = async (req, res, next) => {
 	const { token } = req.query;
-
-	if (!token) {
-		return res.status(400).json({ Error: true, Message: "Token not provided" });
-	}
-
 	try {
-		const decoded = jwt.verify(token, process.env.JWT_VERIFY_MAIL_SECRET_KEY);
-		const { email } = decoded;
-
+		if (!token) throw new CustomError("Token not provided", 400);
+		const email = verifyMailToken(token);
 		const user = await User.findOne({ email });
-
+		if (user.isEmailVerified) throw new CustomError("User email already verified", 400)
 		if (!user) {
-			return res.status(404).json({ Error: true, Message: "User not found" });
+			throw new CustomError("User not found", 404);
 		}
 		user.isEmailVerified = true;
 		await user.save();
-		return res
-			.status(200)
-			.json({ Error: false, Message: "Email verification successful" });
+		return res.status(200).json({
+			error: false,
+			message: "Email verification successful"
+		});
 	} catch (error) {
-		console.error("Error in email verification:", error);
-		return res
-			.status(500)
-			.json({ Error: true, Message: "Internal server error" });
+		if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+			next(new CustomError("Invalid or expired token", 400));
+		}
+		next(error)
 	}
 };
+
+const sendEmailVerificationLink = async (req, res, next) => {
+	try {
+		const email = req.user.email;
+		if (req.user.isEmailVerified) throw new CustomError("User Email Already Verified", 400)
+		const token = generateEmailVerificationToken(email);
+		sendVerificationMail(email, token);
+
+		return res.status(200).json({
+			error: false,
+			message: "Verification email sent successfully",
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
 
 const getLoggedInUserInfo = async (req, res) => {
 	try {
@@ -120,4 +118,4 @@ const getLoggedInUserInfo = async (req, res) => {
 	}
 };
 
-module.exports = { registerUser, loginUser, verifyEmail, getLoggedInUserInfo };
+module.exports = { registerUser, loginUser, verifyEmail, getLoggedInUserInfo, sendEmailVerificationLink };
